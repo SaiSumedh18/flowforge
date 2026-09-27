@@ -83,15 +83,19 @@ jobs:
           VITE_API_URL: http://localhost:4200/api
         run: npm run build
 
+      - name: Create CI environment file
+        run: |
+          cat > server/.env <<'EOF'
+          PORT=4200
+          DATABASE_URL=postgresql://flowforge:flowforge_password@postgres:5432/flowforge
+          JWT_SECRET=flowforge_ci_secret
+          JWT_EXPIRES_IN=1h
+          CLIENT_URL=http://localhost:5176
+          OPENAI_API_KEY=test-key
+          EOF
+
       - name: Validate Docker Compose
         run: docker compose config --quiet
 
       - name: Build Docker images
         run: docker compose build
-        env:
-          PORT: 4200
-          DATABASE_URL: postgresql://flowforge:flowforge_password@postgres:5432/flowforge
-          JWT_SECRET: flowforge_ci_secret
-          JWT_EXPIRES_IN: 1h
-          CLIENT_URL: http://localhost:5176
-          OPENAI_API_KEY: test-key
