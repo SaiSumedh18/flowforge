@@ -1,0 +1,38 @@
+{
+  "name": "flowforge-server",
+  "version": "1.0.0",
+  "description": "Backend API for FlowForge job scheduling and execution platform",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/src/index.js",
+    "test": "DATABASE_URL=postgresql://flowforge:flowforge_password@127.0.0.1:5436/flowforge_test JWT_SECRET=flowforge_test_secret JWT_EXPIRES_IN=1h OPENAI_API_KEY=test-key vitest run",
+    "test:watch": "DATABASE_URL=postgresql://flowforge:flowforge_password@127.0.0.1:5436/flowforge_test JWT_SECRET=flowforge_test_secret JWT_EXPIRES_IN=1h OPENAI_API_KEY=test-key vitest"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "openai": "^7.23.0",
+    "pg": "^8.23.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^26.6.3",
+    "@types/pg": "^8.23.1",
+    "@types/supertest": "^7.2.1",
+    "supertest": "^7.3.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}

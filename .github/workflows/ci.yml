@@ -1,0 +1,97 @@
+name: FlowForge CI
+
+on:
+  push:
+    branches:
+      - main
+
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-build:
+    name: Test and Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+
+        env:
+          POSTGRES_USER: flowforge
+          POSTGRES_PASSWORD: flowforge_password
+          POSTGRES_DB: flowforge_test
+
+        ports:
+          - 5436:5432
+
+        options: >-
+          --health-cmd "pg_isready -U flowforge -d flowforge_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Install backend dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Apply test database schema
+        env:
+          PGPASSWORD: flowforge_password
+        run: |
+          psql \
+            -h 127.0.0.1 \
+            -p 5436 \
+            -U flowforge \
+            -d flowforge_test \
+            -f server/sql/schema.sql
+
+      - name: Run backend integration tests
+        working-directory: server
+        run: npm test
+
+      - name: Build backend
+        working-directory: server
+        env:
+          DATABASE_URL: postgresql://flowforge:flowforge_password@127.0.0.1:5436/flowforge_test
+          JWT_SECRET: flowforge_ci_secret
+          JWT_EXPIRES_IN: 1h
+          OPENAI_API_KEY: test-key
+        run: npm run build
+
+      - name: Install frontend dependencies
+        working-directory: client
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: client
+        env:
+          VITE_API_URL: http://localhost:4200/api
+        run: npm run build
+
+      - name: Validate Docker Compose
+        run: docker compose config --quiet
+
+      - name: Build Docker images
+        run: docker compose build
+        env:
+          PORT: 4200
+          DATABASE_URL: postgresql://flowforge:flowforge_password@postgres:5432/flowforge
+          JWT_SECRET: flowforge_ci_secret
+          JWT_EXPIRES_IN: 1h
+          CLIENT_URL: http://localhost:5176
+          OPENAI_API_KEY: test-key

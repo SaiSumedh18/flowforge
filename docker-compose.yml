@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: flowforge-postgres
+
+    environment:
+      POSTGRES_USER: flowforge
+      POSTGRES_PASSWORD: flowforge_password
+      POSTGRES_DB: flowforge
+
+    ports:
+      - "5436:5432"
+
+    volumes:
+      - flowforge_postgres_data:/var/lib/postgresql/data
+      - ./server/sql/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U flowforge -d flowforge" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  server:
+    build:
+      context: ./server
+
+    container_name: flowforge-server
+
+    env_file:
+      - ./server/.env
+
+    environment:
+      PORT: 4200
+
+      DATABASE_URL: >-
+        postgresql://flowforge:flowforge_password@postgres:5432/flowforge
+
+      CLIENT_URL: http://localhost:5176
+
+    ports:
+      - "4200:4200"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:4200/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  client:
+    build:
+      context: ./client
+
+      args:
+        VITE_API_URL: http://localhost:4200/api
+
+    container_name: flowforge-client
+
+    ports:
+      - "5176:80"
+
+    depends_on:
+      server:
+        condition: service_healthy
+
+volumes:
+  flowforge_postgres_data:
